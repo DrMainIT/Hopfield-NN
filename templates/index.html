@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hopfield Neural Network</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Hopfield Neural Network</h1>
+    
+    <h2>Enter the Activation Weight Matrix:</h2>
+    <table id="weight-matrix">
+        <tbody>
+            <!-- 4x4 Matrix Inputs -->
+            {% for row in range(4) %}
+            <tr>
+                {% for col in range(4) %}
+                <td><input type="number" value="0" class="weight-input"></td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <h2>Input Pattern:</h2>
+    <div id="input-pattern">
+        {% for i in range(4) %}
+        <select class="input-select">
+            <option value="0">0</option>
+            <option value="1">1</option>
+        </select>
+        {% endfor %}
+    </div>
+    
+    <button id="run-button">Run</button>
+    <button id="train-button">Train</button>
+    <form action="/clear" method="post">
+        <button type="submit">Clear</button>
+    </form>
+    
+    <h2>The Output is:</h2>
+    <div id="output">
+        {% for i in range(4) %}
+        <input type="text" value="0" class="output" readonly>
+        {% endfor %}
+    </div>
+    
+    <script>
+        $(document).ready(function() {
+            $('#run-button').click(function() {
+                const weightMatrix = [];
+                $('.weight-input').each(function() {
+                    const value = parseInt($(this).val());
+                    if (!weightMatrix[Math.floor($(this).parent().parent().index() / 4)]) {
+                        weightMatrix[Math.floor($(this).parent().parent().index() / 4)] = [];
+                    }
+                    weightMatrix[Math.floor($(this).parent().parent().index() / 4)].push(value);
+                });
+
+                const inputPattern = $('.input-select').map(function() {
+                    return parseInt($(this).val());
+                }).get();
+
+                $.ajax({
+                    type: "POST",
+                    url: "/run",
+                    contentType: "application/json",
+                    data: JSON.stringify({ input_pattern: inputPattern, weight_matrix: weightMatrix }),
+                    success: function(response) {
+                        $('.output').each(function(index) {
+                            $(this).val(response.output[index] ? "1" : "0");
+                        });
+                    }
+                });
+            });
+
+            $('#train-button').click(function() {
+                const inputPattern = $('.input-select').map(function() {
+                    return $(this).val();
+                }).get();
+
+                $.ajax({
+                    type: "POST",
+                    url: "/train",
+                    contentType: "application/json",
+                    data: JSON.stringify({ input_pattern: inputPattern }),
+                    success: function(response) {
+                        $('.weight-input').each(function(index) {
+                            const row = Math.floor(index / 4);
+                            const col = index % 4;
+                            $(this).val(response.weight_matrix[row][col]);
+                        });
+                    }
+                });
+            });
+
+            $('#clear-button').click(function() {
+                $('.weight-input').val(0);
+                $('.input-select').val("0");
+                $('.output').val(0);
+                $.ajax({
+                    type: "POST",
+                    url: "/clear"
+                });
+            });
+        });
+    </script>
+</body>
+</html>
